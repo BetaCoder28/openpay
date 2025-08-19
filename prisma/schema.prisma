@@ -1,0 +1,79 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+model User {
+  id         Int            @id @default(autoincrement())
+  name       String
+  email      String         @unique
+  password   String
+  openpayId  String?        // Nuevo campo para ID de cliente en OpenPay
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  subscriptions Subscription[] // Relación agregada
+}
+
+model Form {
+  id       Int @id @default(autoincrement())
+  name String
+  email String
+  message String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Products {
+  id              Int     @id @default(autoincrement())
+  name            String
+  price           Float
+  quantity        String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PaymentPlans {
+  id               Int      @id @default(autoincrement())
+  name             String
+  basePrice        Float
+  baseTime         Int
+  durationDays     Int
+  numberPeople     Int
+  isActive         Boolean  @default(false)
+  refreshTime      Int
+  openpayId        String?  // ID de plan en OpenPay
+  // Nuevos campos requeridos
+  retryTimes       Int      @default(3)    // Número de reintentos (1-9)
+  statusAfterRetry String   @default("unpaid") // "unpaid" o "cancelled"
+  trialDays        Int      @default(0)   // Nuevo campo: días de prueba
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  subscriptions    Subscription[]
+}
+
+model Subscription {
+  id            Int          @id @default(autoincrement())
+  userId        Int
+  planId        Int
+  openpayId     String       // ID de la suscripción en OpenPay
+  status        String       @default("pending") // active, cancelled, expired, etc.
+  creationDate  DateTime     @default(now())
+  lastCharge    DateTime?
+  
+  user          User         @relation(fields: [userId], references: [id])
+  plan          PaymentPlans @relation(fields: [planId], references: [id])
+  
+  @@index([userId])
+  @@index([planId])
+}
