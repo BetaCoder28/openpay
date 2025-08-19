@@ -15,14 +15,23 @@ datasource db {
 
 
 model User {
-  id         Int            @id @default(autoincrement())
-  name       String
-  email      String         @unique
-  password   String
-  openpayId  String?        // Nuevo campo para ID de cliente en OpenPay
-  createdAt  DateTime       @default(now())
-  updatedAt  DateTime       @updatedAt
-  subscriptions Subscription[] // Relación agregada
+  id            Int       @id @default(autoincrement())
+  name          String
+  lastName      String?   // Apellidos del cliente
+  email         String    @unique
+  password      String
+  phoneNumber   String?   // Número telefónico del Cliente
+  openpayId     String?   // ID de cliente en OpenPay
+  street        String?   // Calle
+  exteriorNumber String?  // Número exterior
+  interiorNumber String?  // Número interior (opcional)
+  neighborhood  String?   // Colonia
+  city          String?   // Ciudad
+  state         String?   // Estado
+  postalCode    String?   // Código postal
+  country       String?   // País
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }
 
 model Form {
@@ -43,37 +52,18 @@ model Products {
   updatedAt DateTime @updatedAt
 }
 
-model PaymentPlans {
-  id               Int      @id @default(autoincrement())
-  name             String
-  basePrice        Float
-  baseTime         Int
-  durationDays     Int
-  numberPeople     Int
-  isActive         Boolean  @default(false)
-  refreshTime      Int
-  openpayId        String?  // ID de plan en OpenPay
-  // Nuevos campos requeridos
-  retryTimes       Int      @default(3)    // Número de reintentos (1-9)
-  statusAfterRetry String   @default("unpaid") // "unpaid" o "cancelled"
-  trialDays        Int      @default(0)   // Nuevo campo: días de prueba
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  subscriptions    Subscription[]
-}
-
-model Subscription {
-  id            Int          @id @default(autoincrement())
-  userId        Int
-  planId        Int
-  openpayId     String       // ID de la suscripción en OpenPay
-  status        String       @default("pending") // active, cancelled, expired, etc.
-  creationDate  DateTime     @default(now())
-  lastCharge    DateTime?
-  
-  user          User         @relation(fields: [userId], references: [id])
-  plan          PaymentPlans @relation(fields: [planId], references: [id])
-  
-  @@index([userId])
-  @@index([planId])
+model Plans{
+  id Int @id @default(autoincrement())
+  name String
+  amount Float //monto que se cobrará cada vez
+  currency String //moneda
+  repeat_every Int //numero de veces (2 indica dos {repeat_unit})
+  repeat_unit String //week, month, year
+  retry_times Int //numero de intentos de cobro de la suscripción
+  status String //active o deleted
+  status_after_retry String //unpaid o cancelled (status una vez se agoten intentos de retry)
+  trial_days Int
+  openpayId          String?  @unique // id del plan en openpay
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

@@ -6,9 +6,15 @@ import {
   IsNumber,
   IsString,
   Min,
-  Max
+  Max,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+
+export enum StatusAfterRetry {
+  UNPAID = 'unpaid',
+  CANCELLED = 'cancelled'
+}
+
 
 export class PlanDto {
   @IsString()
@@ -19,63 +25,40 @@ export class PlanDto {
   @IsNumber()
   @IsNotEmpty()
   @Min(1)
-  @ApiProperty({ example: 1500.00 })
+  @ApiProperty({ example: 1500.0 })
   amount: number;
 
-  @IsInt()
-  @IsNotEmpty()
-  @Min(1)
-  @ApiProperty({ example: 15 })
-  baseTime: number;
-
-  @IsInt()
-  @IsNotEmpty()
-  @Min(1)
-  @ApiProperty({ example: 30 })
-  durationDays: number;
-
-  @IsInt()
-  @IsNotEmpty()
-  @Min(1)
-  @ApiProperty({ example: 3 })
-  numberPeople: number;
-
-  @IsBoolean()
-  @IsNotEmpty()
-  @ApiProperty({ example: true })
-  isActive: boolean;
-
-  @IsInt()
-  @IsNotEmpty()
-  @Min(1)
-  @ApiProperty({ example: 5 })
-  refreshTime: number;
-
-  // campos requeridos por openpay
-  @IsInt()
-  @Min(1)
-  @Max(9)
-  @ApiProperty({ example: 3 })
-  retryTimes: number;
-
   @IsString()
-  @IsEnum(['unpaid', 'cancelled'])
-  @ApiProperty({ example: 'unpaid' })
-  statusAfterRetry: string;
+  @IsNotEmpty()
+  @ApiProperty({ example: 'MXN' })
+  currency: string; // por defecto es MXN
 
   @IsInt()
-  @Min(0)
-  @ApiProperty({ example: 0 })
-  trialDays: number;
-  
-  @IsInt()
+  @IsNotEmpty()
   @Min(1)
   @ApiProperty({ example: 1 })
-  repeatEvery: number
+  repeat_every: number;
+
+  @IsString()
+  @IsNotEmpty()
+  @ApiProperty({ example: "month" })
+  repeat_unit: string;
+
+  @IsInt()
+  @IsNotEmpty()
+  @Min(1)
+  @ApiProperty({ example: 1 })
+  retry_times: number;
+  
+  @IsEnum(StatusAfterRetry)
+  @ApiProperty({ enum: StatusAfterRetry, example: StatusAfterRetry.UNPAID })
+  status_after_retry: StatusAfterRetry;//unpaid or canceled
+  
   
   @IsInt()
-  @Min(1)
-  @ApiProperty({ example: 'month' })
-  repeatUnit : string
+  @IsNotEmpty()
+  @Min(0)
+  @ApiProperty({ example: 0 })
+  trial_days: number
 
 }

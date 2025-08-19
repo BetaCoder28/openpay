@@ -13,6 +13,6 @@ export class PlansController {
 
   @Get()
   async getPlans() {
-    return await this.planService.getPlans();
+    return await this.planService.getAllPlans();
   }
 }

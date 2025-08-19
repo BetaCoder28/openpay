@@ -11,91 +11,34 @@ export class PlansService {
     private openpayService: OpenpayService,
   ) {}
 
-  async createPlan(planData: PlanDto) {
+  async createPlan(newPlanData: PlanDto) {
     try {
-      // Crear plan en OpenPay con formato correcto (todos los campos numéricos como strings)
-      const openpayPlan = await this.openpayService.createPlan({
-        name: planData.name,
-        amount: planData.amount,
-        repeat_every: planData.durationDays, 
-        repeat_unit: 'month',
-        trial_days: planData.trialDays.toString(),
-        retry_times: planData.retryTimes,
-        status_after_retry: planData.statusAfterRetry
-      });
-  
-      // Guardar en BD con ID de OpenPay
-      return this.prismaService.paymentPlans.create({
+      const openpayPlan = await this.openpayService.createPlan(newPlanData);
+      return this.prismaService.plans.create({
         data: {
-          ...planData,
-          openpayId: openpayPlan.id,
+          name: newPlanData.name,
+          amount: newPlanData.amount,
+          currency: newPlanData.currency,
+          repeat_every: newPlanData.repeat_every,
+          repeat_unit: newPlanData.repeat_unit,
+          retry_times: newPlanData.retry_times,
+          status: 'active', // Valor por defecto
+          status_after_retry: newPlanData.status_after_retry,
+          trial_days: newPlanData.trial_days,
+          openpayId: openpayPlan.id, // Guardar ID de OpenPay
         },
       });
     } catch (error) {
-      console.error('Error creating plan:', {
-        request: planData,
-        error: error.description || error.message
-      });
-      throw new Error('Failed to create plan: ' + error.description);
+      console.error(error);
     }
   }
 
-  async getPlans() {
-    const plans = await this.prismaService.paymentPlans.findMany();
-
-    return plans;
+  async getAllPlans(){
+    try{
+      return this.prismaService.plans.findMany()
+    }catch(error){
+      console.error(error)
+    }
   }
 
-  // Subscription services
-  async createSubscription(subscriptionData: CreateSubscriptionDto) {
-    const user = await this.prismaService.user.findUnique({
-      where: { id: subscriptionData.userId },
-      include: { subscriptions: true },
-    });
-
-    const plan = await this.prismaService.paymentPlans.findUnique({
-      where: { id: subscriptionData.planId },
-    });
-
-    if (!user || !plan) {
-      throw new ForbiddenException('Usuario o plan no encontrado');
-    }
-
-    // Crear cliente en OpenPay si no existe
-    let customerId = user.openpayId;
-    if (!customerId) {
-      const customer = await this.openpayService.createCustomer({
-        name: user.name,
-        email: user.email,
-        requires_account: false,
-      });
-      customerId = customer.id;
-
-      // Actualizar usuario con ID de OpenPay
-      await this.prismaService.user.update({
-        where: { id: user.id },
-        data: { openpayId: customerId },
-      });
-    }
-
-    // Crear suscripción en OpenPay
-    const openpaySubscription = await this.openpayService.createSubscription({
-      plan_id: plan.openpayId,
-      customer_id: customerId,
-      card: {
-        token_id: subscriptionData.cardToken // Formato de objeto con token_id
-      },
-      device_session_id: subscriptionData.deviceSessionId
-    });
-
-    // Guardar suscripción en BD
-    return this.prismaService.subscription.create({
-      data: {
-        userId: user.id,
-        planId: plan.id,
-        openpayId: openpaySubscription.id,
-        status: openpaySubscription.status,
-      },
-    });
-  }
 }
