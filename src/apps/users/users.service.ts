@@ -2,21 +2,32 @@ import { ForbiddenException, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/config/prisma/prisma.service';
 import { UserDto } from './dto/user.dto';
 import * as bcrypt from 'bcrypt';
-import { OpenpayService } from 'src/utils/openpay/openpay.service';
+import { UserOpenpayService } from 'src/utils/openpay/user.openpay.service';
 
 @Injectable()
 export class UserService {
   constructor(
     private prismaService: PrismaService,
-    private openpayService: OpenpayService,
+    private userOpenpayService: UserOpenpayService,
   ) {}
 
   async createUser(data: UserDto) {
+    let openpayCustomer: any = null;
+    
     try {
+      // Verificar si el email ya existe antes de crear en OpenPay
+      const existingUser = await this.prismaService.user.findUnique({
+        where: { email: data.email },
+      });
+
+      if (existingUser) {
+        throw new ForbiddenException(`El email ${data.email} ya está registrado`);
+      }
+
       // Hash de la contraseña
       const hashedPassword = await bcrypt.hash(data.password, 10);
 
-      // Preparar datos para OpenPay - construir dirección correctamente
+      // Preparar datos para OpenPay construir dirección
       const addressLine1 = [data.street, data.exteriorNumber]
         .filter(Boolean)
         .join(' ')
@@ -40,8 +51,7 @@ export class UserService {
       };
 
       // Crear cliente en OpenPay
-      const openpayCustomer =
-        await this.openpayService.createCustomer(openPayCustomerData);
+      openpayCustomer = await this.userOpenpayService.createCustomer(openPayCustomerData);
 
       // Crear usuario en la base de datos con el openpayId
       const user = await this.prismaService.user.create({
@@ -70,15 +80,31 @@ export class UserService {
         user: result,
       };
     } catch (error) {
-      // Mejorar el manejo de errores
       console.error('Error creating user:', error);
 
+      // Si se creó el cliente en OpenPay pero falló la BD, eliminarlo
+      if (openpayCustomer && openpayCustomer.id) {
+        try {
+          await this.userOpenpayService.deleteCustomer(openpayCustomer.id);
+          console.log('Rollback: Customer deleted from OpenPay due to database error');
+        } catch (rollbackError) {
+          console.error('Error during rollback - could not delete OpenPay customer:', rollbackError);
+        }
+      }
+
+      // Manejo específico de errores de Prisma
+      if (error.code === 'P2002') {
+        throw new ForbiddenException(`El email ${data.email} ya está registrado`);
+      }
+
+      // Errores de OpenPay
       if (error.description) {
         throw new ForbiddenException(
           `Error creating user in OpenPay: ${error.description}`,
         );
       }
 
+      // Error genérico
       throw new ForbiddenException('Error creating user: ' + error.message);
     }
   }

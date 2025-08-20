@@ -1,19 +1,19 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { PlanDto } from './dto/plans.dto';
 import { PrismaService } from 'src/config/prisma/prisma.service';
-import { OpenpayService } from 'src/utils/openpay/openpay.service';
-import { CreateSubscriptionDto } from 'src/utils/openpay/dto/create-subscription.dto';
+import { PlansOpenpayService } from 'src/utils/openpay/plans.openpay.service';
+
 
 @Injectable()
 export class PlansService {
   constructor(
     private prismaService: PrismaService,
-    private openpayService: OpenpayService,
+    private plansOpenpayService: PlansOpenpayService,
   ) {}
 
   async createPlan(newPlanData: PlanDto) {
     try {
-      const openpayPlan = await this.openpayService.createPlan(newPlanData);
+      const openpayPlan = await this.plansOpenpayService.createPlan(newPlanData);
       return this.prismaService.plans.create({
         data: {
           name: newPlanData.name,
