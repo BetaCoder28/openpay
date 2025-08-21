@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,26 +7,131 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// MODELS
+// IMPORTANTE DEFINIR RELACIONES EN AMBOS MODELOS (AMBOS SENTIDOS, BIDIRECCIONAL)
+//TABLAS DE STATUS
+model openPayBasicStatus{
+  idOpenPayBasicStatus Int @id @default(autoincrement())
+  status String
+  customUsers customUser[]
+}
+model openPaySubscriptionStatus{
+  idOpenPaySubscriptionStatus Int @id @default(autoincrement())
+  status String
+}
+model statusAfterRetry{
+  idStatusAfterRetry Int @id @default(autoincrement())
+  status String
+}
 
-model User {
-  id            Int       @id @default(autoincrement())
-  name          String
-  lastName      String?   // Apellidos del cliente
-  email         String    @unique
-  password      String
-  phoneNumber   String?   // Número telefónico del Cliente
-  openpayId     String?   // ID de cliente en OpenPay
-  street        String?   // Calle
-  exteriorNumber String?  // Número exterior
-  interiorNumber String?  // Número interior (opcional)
-  neighborhood  String?   // Colonia
-  city          String?   // Ciudad
-  state         String?   // Estado
-  postalCode    String?   // Código postal
-  country       String?   // País
+//TABLAS DE DIRECCIONES
+model countryCode {
+  idCountryCode Int @id @default(autoincrement())
+  countryCode String
+  addDate DateTime @default(now())
+  updateDate DateTime @updatedAt
+  // RELACIONES
+  addresses address[]
+}
+
+model addressComponent{
+  idAddressComponent Int @id @default(autoincrement())
+  component String //condominio, suite o delegacion
+  // RELACIONES
+  adress address []
+}
+
+model address{
+  idAddress Int @id @default(autoincrement())
+  street String
+  outerNumber String
+  interiorNumber String?
+  addressComponentsId Int
+  cologne String
+  postalCode String
+  state String
+  city String
+  countryCodeId Int
+  // RELACIONES
+  countryCode countryCode @relation(fields: [countryCodeId], references: [idCountryCode])
+  customUsers customUser[]
+  addressComponents addressComponent[]
+}
+
+//TABLAS DE USUARIOS
+model store{
+  idStore Int @id @default(autoincrement())
+  reference String
+  barcode_url String?
+  paybin_reference String?
+  barcode_paybin_url String?
+  customUser customUser[]
+}
+
+model userRole{
+  idUserRole Int @id @default(autoincrement())
+  role String
+  baseUser baseUser[]
+}
+
+model baseUser {
+  idBaseUser Int @id @default(autoincrement())
+  name String
+  lastName String?
+  email String @unique
+  password String
+  is_staff Boolean @default(false)
+  roleId Int
+  customUserId Int
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  // RELACIONES
+  role userRole @relation(fields: [roleId], references: [idUserRole])
+  customUser customUser @relation(fields: [customUserId], references: [idCustomUser])
 }
+
+
+model customUser {
+  idCustomUser Int @id @default(autoincrement())
+  phoneNumber String?
+  openPayBasicStatusId Int
+  balance Float
+  clabe String?
+  birthDate DateTime
+  addressId Int
+  storeId Int
+  groupId Int
+  isRefresh Boolean @default(false)
+  openpayId String?
+  // RELACIONES
+  openPayBasicStatus openPayBasicStatus @relation(fields: [openPayBasicStatusId], references: [idOpenPayBasicStatus])
+  baseUser baseUser[]
+  address address @relation(fields: [addressId], references: [idAddress])
+  store store @relation(fields: [storeId], references: [idStore])
+}
+
+//TABLAS DE CARDS
+model bank{
+  idBank Int @id @default(autoincrement())
+  name String
+  code String
+}
+
+model cardBrand{
+  idCardBrand Int @id @default(autoincrement())
+  brand String
+}
+
+model cardType{
+  idCardType Int @id @default(autoincrement())
+  type String
+}
+
+model Card{
+  idCard Int @id @default(autoincrement())
+  cardOpenPayId String
+}
+
 
 model Form {
   id       Int @id @default(autoincrement())
